@@ -12,19 +12,80 @@ Video [here](https://youtu.be/QThadS3Soig)
 kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
 
 # get VPC ID
-aws eks describe-cluster --name getting-started-eks --query "cluster.resourcesVpcConfig.vpcId" --output text
+aws eks describe-cluster --name eks-mendix \
+--query "cluster.resourcesVpcConfig.vpcId" --output text #vpc-059abdda977cacdb0
+
 # Get CIDR range
-aws ec2 describe-vpcs --vpc-ids vpc-id --query "Vpcs[].CidrBlock" --output text
+aws ec2 describe-vpcs --vpc-ids vpc-059abdda977cacdb0  \
+ --query "Vpcs[].CidrBlock" --output text #10.0.0.0/16
 
 # security for our instances to access file storage
-aws ec2 create-security-group --description efs-test-sg --group-name efs-sg --vpc-id VPC_ID
-aws ec2 authorize-security-group-ingress --group-id sg-xxx  --protocol tcp --port 2049 --cidr VPC_CIDR
+aws ec2 create-security-group --description efs-test-sg --group-name efs-sg --vpc-id vpc-059abdda977cacdb0 #GroupId: sg-0255594e5ead6a9ac
+
+aws ec2 authorize-security-group-ingress --group-id  sg-0255594e5ead6a9ac \
+  --protocol tcp --port 2049 --cidr 10.0.0.0/16
+
+  #Values
+  SecurityGroupRules:
+- CidrIpv4: 10.0.0.0/16
+  FromPort: 2049
+  GroupId: sg-0255594e5ead6a9ac
+  GroupOwnerId: '469176205295'
+  IpProtocol: tcp
+  IsEgress: false
+  SecurityGroupRuleId: sgr-042b55d66dd2dfcbb
+  ToPort: 2049
+
+  5dc9  --subnet-id subnet-0de4c63574b19d26d --security-group sg-0255594e5ead6a9ac
+AvailabilityZoneId: euw1-az2
+AvailabilityZoneName: eu-west-1a
+FileSystemId: fs-06d2496c65bf75dc9
+IpAddress: 10.0.4.40
+LifeCycleState: creating
+MountTargetId: fsmt-084671354067ea1d2
+NetworkInterfaceId: eni-0e037afea97b7179f
+OwnerId: '469176205295'
+SubnetId: subnet-0de4c63574b19d26d
+VpcId: vpc-059abdda977cacdb0
+
+
 
 # create storage
 aws efs create-file-system --creation-token eks-efs
 
+# VAlues
+CreationTime: '2022-07-29T23:52:46+01:00'
+CreationToken: eks-efs2
+Encrypted: false
+FileSystemArn: arn:aws:elasticfilesystem:eu-west-1:469176205295:file-system/fs-06d2496c65bf75dc9
+FileSystemId: fs-06d2496c65bf75dc9
+LifeCycleState: creating
+NumberOfMountTargets: 0
+OwnerId: '469176205295'
+PerformanceMode: generalPurpose
+SizeInBytes:
+  Value: 0
+  ValueInIA: 0
+  ValueInStandard: 0
+Tags: []
+ThroughputMode: bursting
+
+
 # create mount point 
 aws efs create-mount-target --file-system-id FileSystemId --subnet-id SubnetID --security-group GroupID
+
+#Values
+vailabilityZoneId: euw1-az3
+AvailabilityZoneName: eu-west-1b
+FileSystemId: fs-06d2496c65bf75dc9
+IpAddress: 10.0.7.30
+LifeCycleState: creating
+MountTargetId: fsmt-0e902eb4f565426c0
+NetworkInterfaceId: eni-0889685eb80b81133
+OwnerId: '469176205295'
+SubnetId: subnet-0c02abffd2083eddf
+VpcId: vpc-059abdda977cacdb0
+
 
 # grab our volume handle to update our PV YAML
 aws efs describe-file-systems --query "FileSystems[*].FileSystemId" --output text
@@ -74,8 +135,15 @@ kubectl apply -n jenkins -f ./jenkins/jenkins.service.yaml
 ## Jenkins Initial Setup
 
 ```
-kubectl -n jenkins exec -it <podname> cat /var/jenkins_home/secrets/initialAdminPassword
-kubectl port-forward -n jenkins <podname> 8080
+kubectl -n jenkins exec -it jenkins-6c88cc978b-gd6c8  -- bash
+
+cat /var/jenkins_home/secrets/initialAdminPassword #a27b4ff029ea481381c2195eb7f93912
+kubectl port-forward -n jenkins jenkins-b4d464798-lszgk 8080  #jenkins-b4d464798-lszgk 
+
+
+USERNAME: medix-test
+PSSD: Nigeria@#1506, Nigeria@1506
+
 
 # setup user and recommended basic plugins
 # let it continue while we move on!
@@ -88,11 +156,17 @@ kubectl port-forward -n jenkins <podname> 8080
 eval $(ssh-agent)
 ssh-add ~/.ssh/id_rsa
 ssh -i ~/.ssh/id_rsa ec2-user@ec2-13-239-41-67.ap-southeast-2.compute.amazonaws.com
-id -u docker
-cat /etc/group
+id -u docker #1001
+cat /etc/group   #docker:x:1950:ec2-user
 # Get user ID for docker
 # Get group ID for docker
 ```
+
+#connnect to ec2-with CLI
+https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-connect-methods.html
+
+
+
 ## Docker Jenkins Agent
 
 Docker file is [here](../dockerfiles/dockerfile) <br/>

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: jenkins
+  namespace: jenkins
   labels:
     app: jenkins
 spec:
@@ -42,4 +43,4 @@ spec:
       volumes:
       - name: jenkins
         persistentVolumeClaim:
-          claimName: jenkins-claim2
+          claimName: jenkins-claim3
